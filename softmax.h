@@ -9,12 +9,12 @@ class Softmax {
 
 public:
 	void forward(matrix<double> input) {
-		matrix<double> exp_values = input - input.max(1, true);
-		exp_values.exp();
+		output = new matrix<double>(input);
 
-		exp_values /= exp_values.sum(1, true);
+		*output -= input.max(1, true);
+		output->exp();
 
-		output = new matrix<double>(exp_values);
+		*output /= output->sum(1, true);
 	}
 
 	matrix<double> getOutput() {
