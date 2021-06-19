@@ -2,8 +2,11 @@
 
 #include <memory>
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <numeric>
+#include <functional>
 
 //#define NDEBUG
 
@@ -109,14 +112,14 @@ public:
 		return std::accumulate(_m, _m + size(), 0.0);
 	}
 
-	matrix<X> sum(int axis, bool keepdims=false) {
+	matrix<X> sum(int axis, bool keepdims = false) {
 		// by columns
 		if (axis == 0) {
-			matrix<T> out(1, _columns);
+			matrix<X> out(1, _columns);
 			for (size_t i = 0; i < _columns; ++i) {
-				out(1,i) = 0.0;
+				out(0, i) = 0.0;
 				for (size_t j = 0; j < _rows; ++j) {
-					out(1, i) += _m[to1D(j, i)];
+					out(0, i) += _m[to1D(j, i)];
 				}
 			}
 			return out;
@@ -124,22 +127,73 @@ public:
 
 		// by rows, return as 1,_rows (horizontal vector)
 		if (keepdims == false) {
-			matrix<T> out(1, _rows);
+			matrix<X> out(1, _rows);
 			for (size_t i = 0; i < _rows; ++i) {
-				out(1, i) = 0.0;
+				out(0, i) = 0.0;
 				for (size_t j = 0; j < _columns; ++j) {
-					out(1, i) += _m[to1D(i, j)];
+					out(0, i) += _m[to1D(i, j)];
 				}
 			}
 			return out;
 		}
 
 		// by rows, return as _rows,1 (vertical vector)
-		matrix<T> out(_rows, 1);
+		matrix<X> out(_rows, 1);
 		for (size_t i = 0; i < _rows; ++i) {
-			out(i, 1) = 0.0;
+			out(i, 0) = 0.0;
 			for (size_t j = 0; j < _columns; ++j) {
-				out(i, 1) += _m[to1D(i, j)];
+				out(i, 0) += _m[to1D(i, j)];
+			}
+		}
+		return out;
+	}
+
+	void exp() {
+		std::transform(_m, _m + size(), _m, static_cast<double(*)(double)>(std::exp));
+	}
+
+	X max() {
+		return *(std::max_element(_m, _m + size()));
+	}
+
+	matrix<X> max(int axis, bool keepdims = false) {
+		// by columns
+		if (axis == 0) {
+			matrix<X> out(1, _columns);
+
+
+			for (size_t i = 0; i < _columns; ++i) {
+				out(0, i) = _m[to1D(0, i)];
+				for (size_t j = 1; j < _rows; ++j) {
+					if (out(0, i) < _m[to1D(j, i)])
+						out(0, i) = _m[to1D(j, i)];
+				}
+			}
+
+
+			return out;
+		}
+
+		// by rows, return as 1,_rows (horizontal vector)
+		if (keepdims == false) {
+			matrix<X> out(1, _rows);
+			for (size_t i = 0; i < _rows; ++i) {
+				out(0, i) = _m[to1D(i, 0)];
+				for (size_t j = 0; j < _columns; ++j) {
+					if (out(0, i) < _m[to1D(i, j)])
+						out(0, i) = _m[to1D(i, j)];
+				}
+			}
+			return out;
+		}
+
+		// by rows, return as _rows,1 (vertical vector)
+		matrix<X> out(_rows, 1);
+		for (size_t i = 0; i < _rows; ++i) {
+			out(i, 0) = _m[to1D(i, 0)];
+			for (size_t j = 0; j < _columns; ++j) {
+				if (out(i, 0) < _m[to1D(i, j)])
+					out(i, 0) = _m[to1D(i, j)];
 			}
 		}
 		return out;
@@ -148,13 +202,13 @@ public:
 	matrix T() {
 		matrix<X> newM(_columns, _rows);
 
-		for (int i = 0; i < _rows; ++i) {
-			for (int j = 0; j < _columns; ++j) {
-				newM(j, i) = _m[to1D(i, j)];
-			}
-		}
+for (int i = 0; i < _rows; ++i) {
+	for (int j = 0; j < _columns; ++j) {
+		newM(j, i) = _m[to1D(i, j)];
+	}
+}
 
-		return newM;
+return newM;
 	}
 
 	// TODO: implement a faster matrix multiplication method
@@ -209,30 +263,55 @@ public:
 	}
 
 	matrix operator+(const matrix& m) {
-		M_Assert((this->_columns == m._columns), "Can't add! Number of columns must match");
-
-		matrix<X> out(this->_rows, this->_columns);
-
-		if (m._rows == 1) {
-			for (size_t i = 0; i < this->_rows; ++i)
-				std::transform(this->_m + to1D(i, 0), this->_m + to1D(i, this->_columns), m._m, out._m + to1D(i, 0), std::plus<X>());
-		}
-		else {
-			std::transform(this->_m, this->_m + this->_rows * this->_columns, m._m, out._m, std::plus<X>());
-		}
-
+		matrix<X> out(*this);
+		mathOperationRaw(out, m, std::plus<X>());
 		return out;
 	}
-
 	void operator+=(const matrix& m) {
-		M_Assert((this->_columns == m._columns), "Can't add! Matrix dimensions must match");
-		if (m._rows == 1) {
-			for (size_t i = 0; i < this->_rows; ++i)
-				std::transform(this->_m + to1D(i, 0), this->_m + to1D(i, this->_columns), m._m, this->_m + to1D(i, 0), std::plus<X>());
+		mathOperationRaw(*this, m, std::plus<X>());
+	}
+	matrix operator-(const matrix& m) {
+		matrix<X> out(*this);
+		mathOperationRaw(out, m, std::minus<X>());
+		return out;
+	}
+	void operator-=(const matrix& m) {
+		mathOperationRaw(*this, m, std::minus<X>());
+	}
+	matrix operator/(const matrix& m) {
+		matrix<X> out(*this);
+		mathOperationRaw(out, m, std::divides<X>());
+		return out;
+	}
+	void operator/=(const matrix& m) {
+		mathOperationRaw(*this, m, std::divides<X>());
+	}
+
+	void mathOperationRaw(const matrix& out, const matrix& m, std::function<X(X, X)> func) {
+		size_t maxRows = std::max(out._rows, m._rows);
+		size_t maxColumns = std::max(out._columns, m._columns);
+
+		if ((out._columns != 1 && out._columns != maxColumns) ||
+			(out._rows != 1 && out._rows != maxRows) ||
+			(m._columns != 1 && m._columns != maxColumns) ||
+			(m._rows != 1 && m._rows != maxRows)) {
+			std::ostringstream errorMessage;
+			errorMessage << "Can't perform matrix operation! Invalid matrices size: (" << out._rows << "," << out._columns << ") and (" << m._rows << "," << m._columns << ")...\n";
+
+			M_Assert(false, errorMessage.str().c_str());
 		}
-		else {
-			std::transform(this->_m, this->_m + this->_rows * this->_columns, m._m, this->_m, std::plus<X>());
+
+		for (size_t i = 0; i < maxRows; ++i) {
+			for (size_t j = 0; j < maxColumns; ++j) {
+				size_t outIndexColumns = (out._columns == 1) ? 0 : j;
+				size_t outIndexRows = (out._rows == 1) ? 0 : i;
+				size_t mIndexColumns = (m._columns == 1) ? 0 : j;
+				size_t mIndexRows = (m._rows == 1) ? 0 : i;
+
+				out(outIndexRows, outIndexColumns) = func(out(outIndexRows, outIndexColumns), m(mIndexRows, mIndexColumns));
+			}
 		}
+
 	}
 
 	void randomizeDouble() {

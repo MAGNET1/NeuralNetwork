@@ -9,8 +9,7 @@ public:
 	void forward(matrix<double> input) {
 		for (size_t i = 0; i < input.rows(); ++i) {
 			for (size_t j = 0; j < input.columns(); ++j) {
-				if (input(i, j) < 0.0)
-					input(i, j) = 0.0;
+				input(i, j) = std::max(input(i, j), 0.0);
 			}
 		}
 

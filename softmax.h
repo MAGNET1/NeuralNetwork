@@ -9,21 +9,12 @@ class Softmax {
 
 public:
 	void forward(matrix<double> input) {
-		for (size_t i = 0; i < input.rows(); ++i) {
-			for (size_t j = 0; j < input.columns(); ++j) {
-				input(i, j) = exp(input(i, j));
-			}
-		}
+		matrix<double> exp_values = input - input.max(1, true);
+		exp_values.exp();
 
-		double sum = input.sum();
+		exp_values /= exp_values.sum(1, true);
 
-		for (size_t i = 0; i < input.rows(); ++i) {
-			for (size_t j = 0; j < input.columns(); ++j) {
-				input(i, j) = input(i, j) / sum;
-			}
-		}
-
-		output = new matrix<double>(input);
+		output = new matrix<double>(exp_values);
 	}
 
 	matrix<double> getOutput() {

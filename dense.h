@@ -6,8 +6,8 @@ class Dense {
 	matrix<double>* weights;
 	matrix<double>* biases;
 	matrix<double>* output;
-public:
 
+public:
 	Dense(size_t n_inputs, size_t n_neurons) {
 		weights = new matrix<double>(n_inputs, n_neurons);
 		biases = new matrix<double>(1, n_neurons);
